@@ -1,97 +1,159 @@
 # Multi-Level User Management System
 
-A comprehensive user management system with hierarchical user roles, authentication, and balance management features.
+A comprehensive user management system with hierarchical user roles, authentication, and balance management features built with Node.js, Express, MongoDB, and Angular.
 
-## Features
+## 🚀 Features
 
-### 1. Authentication (Express + JWT + Cookies + CAPTCHA)
-- User registration and login
-- JWT token-based authentication
-- HTTP-only cookies for security
-- CAPTCHA integration for bot protection
-- Password hashing with bcrypt
+### 🔐 Authentication System
+- **JWT Token Authentication** with HTTP-only cookies
+- **CAPTCHA Integration** for enhanced security
+- **Password Hashing** with bcrypt
+- **Rate Limiting** to prevent brute force attacks
+- **Account Lockout** after failed login attempts
 
-### 2. User Hierarchy & Permissions
+### 👥 User Hierarchy & Permissions
 - **Super Admin**: Full system access, can manage all users
 - **Admin**: Can manage regular users and moderators
 - **Moderator**: Can view and moderate content
 - **User**: Basic access with limited permissions
 
-### 3. Balance Management
+### 💰 Balance Management
 - Add/deduct balance functionality
 - Transaction history tracking
 - Balance validation and limits
-- Audit trail for all balance operations
+- Comprehensive audit trail
 
-### 4. Admin Features
+### 🎛️ Admin Features
 - User management dashboard
 - Role assignment and modification
 - System monitoring and analytics
 - Bulk operations support
 
-### 5. Frontend Interface (Angular)
-- Responsive design with Angular Material
+### 🖥️ Frontend Interface
+- **Angular 16+** with Material Design
+- Responsive design for all devices
 - Role-based UI components
-- Real-time updates
-- Form validation and error handling
+- Real-time updates and notifications
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 **Backend:**
 - Node.js with Express.js
-- MongoDB with Mongoose
+- MongoDB with Mongoose ODM
 - JWT for authentication
 - bcrypt for password hashing
 - express-rate-limit for security
+- CAPTCHA with svg-captcha
 
 **Frontend:**
 - Angular 16+
 - Angular Material UI
 - RxJS for reactive programming
-- Angular Guards for route protection
+- TypeScript
+- SCSS for styling
 
-## Installation
+## 📋 Prerequisites
 
-1. Clone the repository
+- Node.js (v16 or higher)
+- MongoDB (v4.4 or higher)
+- npm or yarn package manager
+
+## 🚀 Quick Start
+
+### 1. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/yourusername/multi-level-user-management.git
 cd multi-level-user-management
 ```
 
-2. Install backend dependencies
+### 2. Install Dependencies
 ```bash
+# Install root dependencies
+npm install
+
+# Install backend dependencies
 cd backend
 npm install
-```
 
-3. Install frontend dependencies
-```bash
+# Install frontend dependencies
 cd ../frontend
 npm install
 ```
 
-4. Set up environment variables
+### 3. Environment Setup
 ```bash
+# Copy environment file
 cp backend/.env.example backend/.env
-# Edit .env with your configuration
 ```
 
-5. Start the development servers
-```bash
-# Backend (from backend directory)
-npm run dev
+Edit `backend/.env` with your configuration:
+```env
+NODE_ENV=development
+PORT=3000
+MONGODB_URI=mongodb://localhost:27017/user-management
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_EXPIRE=7d
+BCRYPT_ROUNDS=12
+CORS_ORIGIN=http://localhost:4200
+SESSION_SECRET=your-session-secret-key-change-this-in-production
+```
 
-# Frontend (from frontend directory)
+### 4. Start MongoDB
+Make sure MongoDB is running on your system.
+
+### 5. Seed Database (Optional)
+```bash
+cd backend
+npm run seed
+```
+
+This creates sample users with different roles for testing.
+
+### 6. Start Development Servers
+
+**Option 1: Start both servers concurrently (from root directory)**
+```bash
+npm run dev
+```
+
+**Option 2: Start servers separately**
+
+Backend:
+```bash
+cd backend
+npm run dev
+```
+
+Frontend:
+```bash
+cd frontend
 npm start
 ```
 
-## API Endpoints
+### 7. Access the Application
+- **Frontend**: http://localhost:4200
+- **Backend API**: http://localhost:3000
+- **API Health Check**: http://localhost:3000/api/health
+
+## 👤 Default Login Credentials
+
+After running the seed script:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Super Admin | admin@example.com | Admin123! |
+| Admin | john@example.com | Admin123! |
+| Moderator | jane@example.com | Moderator123! |
+| User | bob@example.com | User123! |
+
+## 📚 API Endpoints
 
 ### Authentication
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `POST /api/auth/logout` - User logout
 - `GET /api/auth/verify` - Verify JWT token
+- `GET /api/auth/captcha` - Get CAPTCHA image
 
 ### User Management
 - `GET /api/users` - Get all users (Admin only)
@@ -104,17 +166,99 @@ npm start
 - `POST /api/balance/deduct` - Deduct balance
 - `GET /api/balance/history/:userId` - Get transaction history
 
-## Environment Variables
+## 🔒 Security Features
+
+- **JWT Authentication** with HTTP-only cookies
+- **Password Hashing** with bcrypt (12 rounds)
+- **CAPTCHA Protection** on login
+- **Rate Limiting** (100 requests per 15 minutes)
+- **Account Lockout** (5 failed attempts = 2 hour lock)
+- **Input Validation** and sanitization
+- **CORS Protection**
+- **Security Headers** with Helmet.js
+
+## 🏗️ Project Structure
 
 ```
-NODE_ENV=development
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/user-management
-JWT_SECRET=your-jwt-secret
-JWT_EXPIRE=7d
-BCRYPT_ROUNDS=12
+multi-level-user-management/
+├── backend/
+│   ├── middleware/          # Authentication & validation middleware
+│   ├── models/             # MongoDB models
+│   ├── routes/             # API routes
+│   ├── scripts/            # Database seeding scripts
+│   ├── server.js           # Express server setup
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── components/ # Angular components
+│   │   │   ├── guards/     # Route guards
+│   │   │   ├── interceptors/ # HTTP interceptors
+│   │   │   ├── models/     # TypeScript interfaces
+│   │   │   └── services/   # Angular services
+│   │   └── environments/   # Environment configurations
+│   ├── angular.json
+│   └── package.json
+├── README.md
+└── package.json
 ```
 
-## License
+## 🧪 Testing
 
-MIT License
+```bash
+# Backend tests
+cd backend
+npm test
+
+# Frontend tests
+cd frontend
+npm test
+```
+
+## 🚀 Production Deployment
+
+1. Set `NODE_ENV=production`
+2. Use a production MongoDB instance
+3. Set secure JWT_SECRET and SESSION_SECRET
+4. Enable HTTPS
+5. Use a reverse proxy (nginx)
+6. Set up proper logging and monitoring
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**MongoDB Connection Error**
+- Ensure MongoDB is running
+- Check the connection string in `.env`
+
+**Port Already in Use**
+- Change the PORT in `.env` file
+- Kill the process: `netstat -ano | findstr :3000` then `taskkill /PID <PID> /F`
+
+**CORS Issues**
+- Ensure CORS_ORIGIN in `.env` matches your frontend URL
+
+**JWT Token Issues**
+- Clear browser cookies
+- Check JWT_SECRET in `.env`
+
+## 📞 Support
+
+If you have any questions or need help, please open an issue on GitHub.
+
+---
+
+**Built with ❤️ using Node.js, Express, MongoDB, and Angular**
