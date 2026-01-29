@@ -1,0 +1,106 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>Dashboard</h1>
+    <p *ngIf="currentUser">Welcome back, {{ currentUser.username }}!</p>
+  </div>
+
+  <div class="dashboard-content" *ngIf="currentUser">
+    <!-- User Info Card -->
+    <mat-card class="info-card">
+      <mat-card-header>
+        <mat-card-title>Your Account</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="user-info">
+          <div class="info-item">
+            <mat-icon>person</mat-icon>
+            <div>
+              <strong>Username:</strong>
+              <span>{{ currentUser.username }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>email</mat-icon>
+            <div>
+              <strong>Email:</strong>
+              <span>{{ currentUser.email }}</span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>security</mat-icon>
+            <div>
+              <strong>Role:</strong>
+              <span class="role-badge" [ngClass]="getRoleColor(currentUser.role)">
+                {{ getRoleDisplayName(currentUser.role) }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <div>
+              <strong>Balance:</strong>
+              <span class="balance" [ngClass]="currentUser.balance > 0 ? 'balance-positive' : 'balance-zero'">
+                ${{ currentUser.balance.toFixed(2) }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="info-item">
+            <mat-icon>schedule</mat-icon>
+            <div>
+              <strong>Last Login:</strong>
+              <span>{{ currentUser.lastLogin | date:'medium' }}</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-raised-button color="primary" routerLink="/profile">
+          <mat-icon>edit</mat-icon>
+          Edit Profile
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Quick Actions -->
+    <mat-card class="info-card">
+      <mat-card-header>
+        <mat-card-title>Quick Actions</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="quick-actions">
+          <button mat-raised-button routerLink="/transactions" class="action-button">
+            <mat-icon>receipt</mat-icon>
+            View Transactions
+          </button>
+          
+          <button mat-raised-button routerLink="/users" *ngIf="canAccessUsers()" class="action-button">
+            <mat-icon>people</mat-icon>
+            Manage Users
+          </button>
+          
+          <button mat-raised-button routerLink="/balance" *ngIf="canAccessBalance()" class="action-button">
+            <mat-icon>account_balance_wallet</mat-icon>
+            Manage Balance
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- System Info (for admins) -->
+    <mat-card class="info-card" *ngIf="canAccessUsers()">
+      <mat-card-header>
+        <mat-card-title>System Information</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="system-info">
+          <p>You have administrative access to this system.</p>
+          <p>Use the navigation menu to access user management and balance operations.</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

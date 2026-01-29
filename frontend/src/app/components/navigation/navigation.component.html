@@ -1,0 +1,45 @@
+<mat-toolbar color="primary" class="navbar">
+  <span class="app-title">User Management System</span>
+  
+  <div class="nav-spacer"></div>
+  
+  <div class="nav-links" *ngIf="authService.currentUser$ | async as user">
+    <button mat-button routerLink="/dashboard" routerLinkActive="active">
+      <mat-icon>dashboard</mat-icon>
+      Dashboard
+    </button>
+    
+    <button mat-button routerLink="/users" routerLinkActive="active" *ngIf="canAccessUsers()">
+      <mat-icon>people</mat-icon>
+      Users
+    </button>
+    
+    <button mat-button routerLink="/balance" routerLinkActive="active" *ngIf="canAccessBalance()">
+      <mat-icon>account_balance_wallet</mat-icon>
+      Balance
+    </button>
+    
+    <button mat-button routerLink="/transactions" routerLinkActive="active">
+      <mat-icon>receipt</mat-icon>
+      Transactions
+    </button>
+    
+    <button mat-button [matMenuTriggerFor]="userMenu">
+      <mat-icon>account_circle</mat-icon>
+      {{ user.username }}
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+    
+    <mat-menu #userMenu="matMenu">
+      <button mat-menu-item routerLink="/profile">
+        <mat-icon>person</mat-icon>
+        Profile
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        Logout
+      </button>
+    </mat-menu>
+  </div>
+</mat-toolbar>

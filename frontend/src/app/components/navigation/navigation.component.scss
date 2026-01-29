@@ -1,0 +1,61 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-title {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.nav-spacer {
+  flex: 1 1 auto;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-links button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.nav-links button.active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 768px) {
+  .app-title {
+    font-size: 16px;
+  }
+  
+  .nav-links button {
+    padding: 0 8px;
+    min-width: auto;
+    
+    .mat-button-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+  
+  // Hide text on mobile, show only icons
+  .nav-links button span:not(.mat-icon) {
+    display: none;
+  }
+}

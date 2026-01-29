@@ -1,0 +1,168 @@
+/* You can add global styles to this file, and also import other style files */
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* Custom styles */
+.full-width {
+  width: 100%;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.ml-2 { margin-left: 16px; }
+.mr-2 { margin-right: 16px; }
+
+.p-2 { padding: 16px; }
+.p-3 { padding: 24px; }
+
+.flex {
+  display: flex;
+}
+
+.flex-column {
+  flex-direction: column;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.space-between {
+  justify-content: space-between;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+/* Loading spinner */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+/* Error message */
+.error-message {
+  color: #f44336;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Success message */
+.success-message {
+  color: #4caf50;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Card styles */
+.info-card {
+  margin: 16px 0;
+  padding: 16px;
+}
+
+/* Table styles */
+.mat-mdc-table {
+  width: 100%;
+}
+
+.mat-mdc-header-cell {
+  font-weight: 600;
+}
+
+/* Form styles */
+.form-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.form-field {
+  margin-bottom: 16px;
+}
+
+/* Navigation styles */
+.nav-spacer {
+  flex: 1 1 auto;
+}
+
+/* Role badges */
+.role-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.role-super-admin {
+  background-color: #e91e63;
+  color: white;
+}
+
+.role-admin {
+  background-color: #ff9800;
+  color: white;
+}
+
+.role-moderator {
+  background-color: #2196f3;
+  color: white;
+}
+
+.role-user {
+  background-color: #4caf50;
+  color: white;
+}
+
+/* Status badges */
+.status-active {
+  color: #4caf50;
+}
+
+.status-inactive {
+  color: #f44336;
+}
+
+/* Balance display */
+.balance-positive {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.balance-zero {
+  color: #757575;
+}
+
+/* Transaction type */
+.transaction-credit {
+  color: #4caf50;
+}
+
+.transaction-debit {
+  color: #f44336;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .form-container {
+    padding: 16px;
+  }
+  
+  .mat-mdc-table {
+    font-size: 14px;
+  }
+}
