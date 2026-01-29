@@ -111,3 +111,6 @@ frontend/out-tsc/
 API_DOCUMENTATION.md
 SETUP.md
 Machine test.pdf
+
+# Windows batch files
+*.bat
