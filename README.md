@@ -294,14 +294,30 @@ multi-level-user-management/
 
 ## Production Deployment
 
-When deploying to production:
+When deploying to production, we've created comprehensive deployment guides:
 
-1. Set `NODE_ENV=production` in your environment variables
-2. Use a production MongoDB instance (MongoDB Atlas recommended)
-3. Set strong, unique values for `JWT_SECRET` and `SESSION_SECRET`
-4. Enable HTTPS for secure communication
-5. Use a reverse proxy like nginx
-6. Set up proper logging and monitoring
+### Quick Start
+- **Quick Deployment Checklist**: See [`QUICK_DEPLOY.md`](QUICK_DEPLOY.md) for a step-by-step checklist
+- **Detailed Guide**: See [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) for complete instructions with troubleshooting
+
+### Deployment Overview
+
+**Backend (Render):**
+1. Set up MongoDB Atlas (free tier available)
+2. Deploy backend to Render with environment variables
+3. Configure CORS to allow your frontend domain
+
+**Frontend (Vercel):**
+1. Update `environment.prod.ts` with your backend URL
+2. Deploy to Vercel (automatic from GitHub)
+3. Update CORS in Render with your Vercel URL
+
+**Post-Deployment:**
+1. Create initial admin user via API
+2. Test all features
+3. Set up monitoring and alerts
+
+For detailed step-by-step instructions, troubleshooting, and security considerations, see the deployment guides mentioned above.
 7. Configure CORS to only allow your production domain
 8. Regularly update dependencies for security patches
 
