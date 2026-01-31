@@ -27,7 +27,7 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
+  origin: process.env.CORS_ORIGIN || 'https://multi-level-user-management.vercel.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
