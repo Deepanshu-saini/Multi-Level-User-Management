@@ -18,11 +18,22 @@ router.get('/captcha', (req, res) => {
       background: '#f0f0f0'
     });
     
-    // Store CAPTCHA text and expiry time in session (5 minutes)
-    req.session.captcha = {
-      text: captcha.text.toLowerCase(),
-      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes from now
-    };
+    // Create a JWT token containing the CAPTCHA text and expiry
+    const captchaToken = jwt.sign(
+      { 
+        captcha: captcha.text.toLowerCase(),
+        exp: Math.floor(Date.now() / 1000) + (5 * 60) // 5 minutes from now
+      },
+      process.env.JWT_SECRET
+    );
+    
+    // Set the CAPTCHA token as an HTTP-only cookie
+    res.cookie('captcha_token', captchaToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 5 * 60 * 1000 // 5 minutes
+    });
     
     res.type('svg');
     res.status(200).send(captcha.data);
@@ -154,17 +165,22 @@ router.post('/login', validateLogin, async (req, res) => {
   try {
     const { email, password, captcha } = req.body;
     
-    // Verify CAPTCHA
-    if (!req.session.captcha) {
+    // Verify CAPTCHA using JWT token from cookie
+    const captchaToken = req.cookies.captcha_token;
+    
+    if (!captchaToken) {
       return res.status(400).json({
         success: false,
         message: 'CAPTCHA not found. Please refresh the CAPTCHA.'
       });
     }
     
-    // Check if CAPTCHA has expired (5 minutes)
-    if (Date.now() > req.session.captcha.expiresAt) {
-      delete req.session.captcha;
+    let captchaData;
+    try {
+      captchaData = jwt.verify(captchaToken, process.env.JWT_SECRET);
+    } catch (tokenError) {
+      // Clear the invalid token
+      res.clearCookie('captcha_token');
       return res.status(400).json({
         success: false,
         message: 'CAPTCHA has expired. Please refresh and try again.'
@@ -172,15 +188,15 @@ router.post('/login', validateLogin, async (req, res) => {
     }
     
     // Verify CAPTCHA text
-    if (captcha.toLowerCase() !== req.session.captcha.text) {
+    if (captcha.toLowerCase() !== captchaData.captcha) {
       return res.status(400).json({
         success: false,
         message: 'Invalid CAPTCHA'
       });
     }
     
-    // Clear CAPTCHA from session after successful verification
-    delete req.session.captcha;
+    // Clear CAPTCHA token after successful verification
+    res.clearCookie('captcha_token');
     
     // Find user by email
     const user = await User.findOne({ email });
