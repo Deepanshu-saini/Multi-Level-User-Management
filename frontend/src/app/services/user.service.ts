@@ -63,4 +63,16 @@ export class UserService {
   updateCurrentUserProfile(userData: { username?: string; email?: string }): Observable<ApiResponse<{ user: User }>> {
     return this.http.put<ApiResponse<{ user: User }>>(`${this.API_URL}/users/profile/me`, userData);
   }
+
+  getDownline(userId: string): Observable<ApiResponse<{ downline: User[]; count: number }>> {
+    return this.http.get<ApiResponse<{ downline: User[]; count: number }>>(`${this.API_URL}/users/${userId}/downline`);
+  }
+
+  getDownlineTree(userId: string): Observable<ApiResponse<{ tree: any }>> {
+    return this.http.get<ApiResponse<{ tree: any }>>(`${this.API_URL}/users/${userId}/downline/tree`);
+  }
+
+  getNextLevelUsers(userId: string): Observable<ApiResponse<{ users: User[]; count: number }>> {
+    return this.http.get<ApiResponse<{ users: User[]; count: number }>>(`${this.API_URL}/users/${userId}/next-level`);
+  }
 }

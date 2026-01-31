@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const { authenticateToken, requireRole, canManageUser } = require('../middleware/auth');
 const { validateUserUpdate, validateUserQuery, validateObjectId } = require('../middleware/validation');
+const { getDownline, getDownlineTree, isInDownline, getNextLevelUsers } = require('../utils/downline');
 
 const router = express.Router();
 
@@ -57,6 +58,15 @@ router.get('/', authenticateToken, requireRole(['admin', 'super_admin']), valida
       User.countDocuments(query)
     ]);
     
+    // Transform users to include 'id' field (convert _id to id)
+    const transformedUsers = users.map(user => {
+      const userObj = user.toObject ? user.toObject() : user;
+      return {
+        ...userObj,
+        id: userObj._id ? String(userObj._id) : String(userObj.id || '')
+      };
+    });
+    
     // Calculate pagination info
     const totalPages = Math.ceil(totalUsers / parseInt(limit));
     const hasNextPage = parseInt(page) < totalPages;
@@ -66,7 +76,7 @@ router.get('/', authenticateToken, requireRole(['admin', 'super_admin']), valida
       success: true,
       message: 'Users retrieved successfully',
       data: {
-        users,
+        users: transformedUsers,
         pagination: {
           currentPage: parseInt(page),
           totalPages,
@@ -101,10 +111,17 @@ router.get('/:id', authenticateToken, validateObjectId('id'), canManageUser, asy
       });
     }
     
+    // Transform user to include 'id' field
+    const userObj = user.toObject ? user.toObject() : user;
+    const transformedUser = {
+      ...userObj,
+      id: userObj._id ? String(userObj._id) : String(userObj.id || '')
+    };
+    
     res.status(200).json({
       success: true,
       message: 'User retrieved successfully',
-      data: { user }
+      data: { user: transformedUser }
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -176,10 +193,17 @@ router.put('/:id', authenticateToken, validateObjectId('id'), validateUserUpdate
       });
     }
     
+    // Transform user to include 'id' field
+    const userObj = updatedUser.toObject ? updatedUser.toObject() : updatedUser;
+    const transformedUser = {
+      ...userObj,
+      id: userObj._id ? userObj._id.toString() : userObj.id
+    };
+    
     res.status(200).json({
       success: true,
       message: 'User updated successfully',
-      data: { user: updatedUser }
+      data: { user: transformedUser }
     });
   } catch (error) {
     console.error('Update user error:', error);
@@ -301,14 +325,36 @@ router.get('/stats/overview', authenticateToken, requireRole(['admin', 'super_ad
 // Get current user profile
 router.get('/profile/me', authenticateToken, async (req, res) => {
   try {
+    // Ensure user is authenticated and has a valid ID
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
     const user = await User.findById(req.user._id)
       .select('-password')
       .populate('createdBy', 'username email');
     
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Transform user to include 'id' field
+    const userObj = user.toObject ? user.toObject() : user;
+    const transformedUser = {
+      ...userObj,
+      id: userObj._id ? String(userObj._id) : String(userObj.id || '')
+    };
+    
     res.status(200).json({
       success: true,
       message: 'Profile retrieved successfully',
-      data: { user }
+      data: { user: transformedUser }
     });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -323,6 +369,14 @@ router.get('/profile/me', authenticateToken, async (req, res) => {
 // Update current user profile
 router.put('/profile/me', authenticateToken, async (req, res) => {
   try {
+    // Ensure user is authenticated and has a valid ID
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
     const { username, email } = req.body;
     const userId = req.user._id;
     
@@ -356,10 +410,17 @@ router.put('/profile/me', authenticateToken, async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password').populate('createdBy', 'username email');
     
+    // Transform user to include 'id' field
+    const userObj = updatedUser.toObject ? updatedUser.toObject() : updatedUser;
+    const transformedUser = {
+      ...userObj,
+      id: userObj._id ? userObj._id.toString() : userObj.id
+    };
+    
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
-      data: { user: updatedUser }
+      data: { user: transformedUser }
     });
   } catch (error) {
     console.error('Update profile error:', error);
@@ -375,6 +436,142 @@ router.put('/profile/me', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// Get downline hierarchy for a user
+router.get('/:id/downline', authenticateToken, validateObjectId('id'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user can view this downline
+    // Users can view their own downline, admins can view any user's downline
+    const canView = req.user._id.toString() === id || 
+                   await isInDownline(req.user._id, id) ||
+                   ['admin', 'super_admin'].includes(req.user.role);
+    
+    if (!canView && req.user._id.toString() !== id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot view this user\'s downline'
+      });
+    }
+    
+    // Get downline as flat list
+    const downline = await getDownline(id, false);
+    
+    // Transform users to include 'id' field
+    const transformedDownline = downline.map((user) => {
+      const userObj = user.toObject ? user.toObject() : user;
+      return {
+        ...userObj,
+        id: userObj._id ? String(userObj._id) : String(userObj.id || '')
+      };
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Downline retrieved successfully',
+      data: {
+        downline: transformedDownline,
+        count: transformedDownline.length
+      }
+    });
+  } catch (error) {
+    console.error('Get downline error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve downline',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// Get downline hierarchy as tree structure
+router.get('/:id/downline/tree', authenticateToken, validateObjectId('id'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user can view this downline
+    const canView = req.user._id.toString() === id || 
+                   await isInDownline(req.user._id, id) ||
+                   ['admin', 'super_admin'].includes(req.user.role);
+    
+    if (!canView && req.user._id.toString() !== id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot view this user\'s downline'
+      });
+    }
+    
+    // Get downline as tree
+    const tree = await getDownlineTree(id);
+    
+    if (!tree) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Downline tree retrieved successfully',
+      data: { tree }
+    });
+  } catch (error) {
+    console.error('Get downline tree error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve downline tree',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// Get next level users (direct children only)
+router.get('/:id/next-level', authenticateToken, validateObjectId('id'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user can view next level
+    const canView = req.user._id.toString() === id || 
+                   await isInDownline(req.user._id, id) ||
+                   ['admin', 'super_admin'].includes(req.user.role);
+    
+    if (!canView && req.user._id.toString() !== id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot view this user\'s next level'
+      });
+    }
+    
+    const nextLevelUsers = await getNextLevelUsers(id);
+    
+    // Transform users to include 'id' field
+    const transformedUsers = nextLevelUsers.map((user) => {
+      const userObj = user.toObject ? user.toObject() : user;
+      return {
+        ...userObj,
+        id: userObj._id ? userObj._id.toString() : userObj.id
+      };
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Next level users retrieved successfully',
+      data: {
+        users: transformedUsers,
+        count: transformedUsers.length
+      }
+    });
+  } catch (error) {
+    console.error('Get next level users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve next level users',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }

@@ -1,0 +1,25 @@
+<div class="hierarchy-container">
+  <div class="hierarchy-header">
+    <h2>User Hierarchy</h2>
+    <button mat-icon-button (click)="loadHierarchy(userId || authService.currentUser?.id || '')" [disabled]="isLoading">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <mat-progress-spinner *ngIf="isLoading" mode="indeterminate" diameter="40" class="spinner"></mat-progress-spinner>
+
+  <div *ngIf="!isLoading && tree" class="tree-container">
+    <app-tree-node 
+      [node]="tree" 
+      [level]="0"
+      [expandedNodes]="expandedNodes"
+      (toggleNode)="toggleNode($event)"
+      (viewUser)="viewUserDetails($event)">
+    </app-tree-node>
+  </div>
+
+  <div *ngIf="!isLoading && !tree" class="no-data">
+    <mat-icon>account_tree</mat-icon>
+    <p>No hierarchy data available</p>
+  </div>
+</div>

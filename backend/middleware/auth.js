@@ -23,6 +23,14 @@ const authenticateToken = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
+    // Validate userId from token
+    if (!decoded.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token. User ID missing.'
+      });
+    }
+    
     // Get user from database
     const user = await User.findById(decoded.userId).select('-password');
     
@@ -37,6 +45,14 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'Account is deactivated.'
+      });
+    }
+    
+    // Ensure user._id is properly set (should already be ObjectId from mongoose)
+    if (!user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid user data.'
       });
     }
     

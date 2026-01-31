@@ -1,0 +1,30 @@
+.user-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 400px;
+  padding: var(--spacing-md) 0;
+}
+
+.status-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) 0;
+  
+  mat-hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+  }
+}
+
+mat-dialog-actions {
+  padding: var(--spacing-md) 0;
+  gap: var(--spacing-sm);
+}
+
+@media (max-width: 480px) {
+  .user-form {
+    min-width: 300px;
+  }
+}

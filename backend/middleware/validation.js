@@ -95,8 +95,26 @@ const validateUserUpdate = [
   
   body('isActive')
     .optional()
-    .isBoolean()
-    .withMessage('isActive must be a boolean value'),
+    .custom((value) => {
+      // Accept boolean, string "true"/"false", or 1/0
+      if (typeof value === 'boolean') return true;
+      if (typeof value === 'string') {
+        const lowerValue = value.toLowerCase();
+        if (lowerValue === 'true' || lowerValue === 'false') return true;
+      }
+      if (value === 1 || value === 0) return true;
+      throw new Error('isActive must be a boolean value (true/false)');
+    })
+    .customSanitizer((value) => {
+      // Convert to boolean
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        return value.toLowerCase() === 'true';
+      }
+      if (value === 1) return true;
+      if (value === 0) return false;
+      return Boolean(value);
+    }),
   
   handleValidationErrors
 ];
@@ -104,14 +122,30 @@ const validateUserUpdate = [
 // Balance operation validation
 const validateBalanceOperation = [
   body('userId')
+    .notEmpty()
+    .withMessage('User ID is required')
     .isMongoId()
     .withMessage('Invalid user ID'),
   
   body('amount')
-    .isFloat({ min: 0.01 })
-    .withMessage('Amount must be a positive number greater than 0'),
+    .notEmpty()
+    .withMessage('Amount is required')
+    .custom((value) => {
+      // Handle both string and number inputs
+      const numValue = typeof value === 'number' ? value : parseFloat(value);
+      if (isNaN(numValue) || numValue <= 0 || !isFinite(numValue)) {
+        throw new Error('Amount must be a positive number greater than 0');
+      }
+      return true;
+    })
+    .customSanitizer((value) => {
+      // Convert to number if it's a string
+      return typeof value === 'number' ? value : parseFloat(value);
+    }),
   
   body('description')
+    .notEmpty()
+    .withMessage('Description is required')
     .trim()
     .isLength({ min: 1, max: 500 })
     .withMessage('Description must be between 1 and 500 characters'),
@@ -161,8 +195,26 @@ const validateUserQuery = [
   
   query('isActive')
     .optional()
-    .isBoolean()
-    .withMessage('isActive filter must be a boolean'),
+    .custom((value) => {
+      // Accept boolean, string "true"/"false", or 1/0
+      if (typeof value === 'boolean') return true;
+      if (typeof value === 'string') {
+        const lowerValue = value.toLowerCase();
+        if (lowerValue === 'true' || lowerValue === 'false') return true;
+      }
+      if (value === 1 || value === 0 || value === '1' || value === '0') return true;
+      throw new Error('isActive filter must be a boolean value (true/false)');
+    })
+    .customSanitizer((value) => {
+      // Convert to boolean
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        return value.toLowerCase() === 'true' || value === '1';
+      }
+      if (value === 1 || value === '1') return true;
+      if (value === 0 || value === '0') return false;
+      return Boolean(value);
+    }),
   
   query('search')
     .optional()
@@ -199,6 +251,17 @@ const validateTransactionQuery = [
     .optional()
     .isISO8601()
     .withMessage('End date must be a valid ISO 8601 date'),
+  
+  query('sortBy')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('SortBy must be between 1 and 50 characters'),
+  
+  query('sortOrder')
+    .optional()
+    .isIn(['asc', 'desc'])
+    .withMessage('SortOrder must be either "asc" or "desc"'),
   
   handleValidationErrors
 ];

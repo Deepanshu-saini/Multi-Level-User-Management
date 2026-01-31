@@ -1,0 +1,47 @@
+<div class="tree-node">
+  <div class="node-content" [style.padding-left.px]="level * 30">
+    <button 
+      mat-icon-button 
+      (click)="onToggleNode(node.user.id)" 
+      *ngIf="node.children.length > 0" 
+      class="expand-btn">
+      <mat-icon>{{ isExpanded(node.user.id) ? 'expand_more' : 'chevron_right' }}</mat-icon>
+    </button>
+    <span *ngIf="node.children.length === 0" class="spacer"></span>
+    
+    <div class="user-info">
+      <div class="user-main">
+        <span class="username">{{ node.user.username }}</span>
+        <span class="role-badge" [ngClass]="getRoleColor(node.user.role)">
+          {{ getRoleDisplayName(node.user.role) }}
+        </span>
+        <span class="balance">${{ node.user.balance.toFixed(2) }}</span>
+      </div>
+      <div class="user-details">
+        <span class="email">{{ node.user.email }}</span>
+        <span class="status" [ngClass]="{'active': node.user.isActive, 'inactive': !node.user.isActive}">
+          {{ node.user.isActive ? 'Active' : 'Inactive' }}
+        </span>
+      </div>
+    </div>
+    
+    <button 
+      mat-icon-button 
+      (click)="onViewUser(node.user.id)" 
+      class="view-btn" 
+      matTooltip="View Details">
+      <mat-icon>visibility</mat-icon>
+    </button>
+  </div>
+  
+  <div class="children" *ngIf="isExpanded(node.user.id) && node.children.length > 0">
+    <app-tree-node 
+      *ngFor="let child of node.children"
+      [node]="child"
+      [level]="level + 1"
+      [expandedNodes]="expandedNodes"
+      (toggleNode)="onToggleNode($event)"
+      (viewUser)="onViewUser($event)">
+    </app-tree-node>
+  </div>
+</div>

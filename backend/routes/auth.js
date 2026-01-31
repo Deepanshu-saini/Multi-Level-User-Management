@@ -3,7 +3,8 @@ const jwt = require('jsonwebtoken');
 const svgCaptcha = require('svg-captcha');
 const User = require('../models/User');
 const { authenticateToken, requireRole } = require('../middleware/auth');
-const { validateRegistration, validateLogin, validatePasswordChange } = require('../middleware/validation');
+const { validateRegistration, validateLogin, validatePasswordChange, validateObjectId } = require('../middleware/validation');
+const { isInDownline } = require('../utils/downline');
 
 const router = express.Router();
 
@@ -17,8 +18,11 @@ router.get('/captcha', (req, res) => {
       background: '#f0f0f0'
     });
     
-    // Store CAPTCHA text in session
-    req.session.captcha = captcha.text.toLowerCase();
+    // Store CAPTCHA text and expiry time in session (5 minutes)
+    req.session.captcha = {
+      text: captcha.text.toLowerCase(),
+      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes from now
+    };
     
     res.type('svg');
     res.status(200).send(captcha.data);
@@ -51,10 +55,45 @@ router.post('/register', validateRegistration, async (req, res) => {
     // Create new user
     const userData = { username, email, password };
     
-    // Only allow role assignment by admin or super_admin
-    if (role && req.user && ['admin', 'super_admin'].includes(req.user.role)) {
-      userData.role = role;
+    // If user is authenticated (creating another user), set createdBy to establish hierarchy
+    if (req.user && req.user._id) {
+      // ALWAYS set createdBy when authenticated user creates another user
+      // This establishes the parent-child relationship in the hierarchy
       userData.createdBy = req.user._id;
+      
+      // Role assignment logic based on creator's role:
+      // - Super admin can assign any role
+      // - Admin can assign user, moderator, admin (but not super_admin)
+      // - Regular users can only create 'user' role (their next level)
+      if (role) {
+        if (req.user.role === 'super_admin') {
+          userData.role = role;
+        } else if (req.user.role === 'admin' && ['user', 'moderator', 'admin'].includes(role)) {
+          userData.role = role;
+        } else if (!['admin', 'super_admin'].includes(req.user.role) && role === 'user') {
+          // Regular users can only create 'user' role (their next level)
+          userData.role = 'user';
+        } else {
+          return res.status(403).json({
+            success: false,
+            message: 'You do not have permission to assign this role. You can only create users in your next level.'
+          });
+        }
+      } else {
+        // Default role based on creator's permissions
+        if (req.user.role === 'super_admin') {
+          userData.role = 'user'; // Default for super admin
+        } else if (req.user.role === 'admin') {
+          userData.role = 'user'; // Default for admin
+        } else {
+          userData.role = 'user'; // Regular users can only create 'user' role
+        }
+      }
+    } else {
+      // Public registration (no authenticated user) - default to 'user' role
+      // No parent for public registrations (they become root users)
+      userData.role = role || 'user';
+      userData.createdBy = null;
     }
     
     const user = new User(userData);
@@ -80,7 +119,7 @@ router.post('/register', validateRegistration, async (req, res) => {
       message: 'User registered successfully',
       data: {
         user: {
-          id: user._id,
+          id: user._id ? String(user._id) : user.id,
           username: user.username,
           email: user.email,
           role: user.role,
@@ -116,14 +155,31 @@ router.post('/login', validateLogin, async (req, res) => {
     const { email, password, captcha } = req.body;
     
     // Verify CAPTCHA
-    if (!req.session.captcha || captcha.toLowerCase() !== req.session.captcha) {
+    if (!req.session.captcha) {
+      return res.status(400).json({
+        success: false,
+        message: 'CAPTCHA not found. Please refresh the CAPTCHA.'
+      });
+    }
+    
+    // Check if CAPTCHA has expired (5 minutes)
+    if (Date.now() > req.session.captcha.expiresAt) {
+      delete req.session.captcha;
+      return res.status(400).json({
+        success: false,
+        message: 'CAPTCHA has expired. Please refresh and try again.'
+      });
+    }
+    
+    // Verify CAPTCHA text
+    if (captcha.toLowerCase() !== req.session.captcha.text) {
       return res.status(400).json({
         success: false,
         message: 'Invalid CAPTCHA'
       });
     }
     
-    // Clear CAPTCHA from session
+    // Clear CAPTCHA from session after successful verification
     delete req.session.captcha;
     
     // Find user by email
@@ -194,7 +250,7 @@ router.post('/login', validateLogin, async (req, res) => {
       message: 'Login successful',
       data: {
         user: {
-          id: user._id,
+          id: user._id ? String(user._id) : user.id,
           username: user.username,
           email: user.email,
           role: user.role,
@@ -240,24 +296,32 @@ router.post('/logout', (req, res) => {
 });
 
 // Verify token and get current user
-router.get('/verify', authenticateToken, (req, res) => {
+router.get('/verify', authenticateToken, async (req, res) => {
   try {
-    res.status(200).json({
-      success: true,
-      message: 'Token is valid',
-      data: {
-        user: {
-          id: req.user._id,
-          username: req.user.username,
-          email: req.user.email,
-          role: req.user.role,
-          balance: req.user.balance,
-          isActive: req.user.isActive,
-          lastLogin: req.user.lastLogin,
-          createdAt: req.user.createdAt
-        }
-      }
-    });
+    // Ensure user is authenticated and has a valid ID
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+          res.status(200).json({
+            success: true,
+            message: 'Token is valid',
+            data: {
+              user: {
+                id: req.user._id ? String(req.user._id) : req.user.id,
+                username: req.user.username,
+                email: req.user.email,
+                role: req.user.role,
+                balance: req.user.balance,
+                isActive: req.user.isActive,
+                lastLogin: req.user.lastLogin,
+                createdAt: req.user.createdAt
+              }
+            }
+          });
   } catch (error) {
     console.error('Token verification error:', error);
     res.status(500).json({
@@ -267,7 +331,7 @@ router.get('/verify', authenticateToken, (req, res) => {
   }
 });
 
-// Change password
+// Change password (self)
 router.put('/change-password', authenticateToken, validatePasswordChange, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -292,6 +356,62 @@ router.put('/change-password', authenticateToken, validatePasswordChange, async 
     });
   } catch (error) {
     console.error('Password change error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Password change failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// Change password for downline user
+router.put('/change-password/:userId', authenticateToken, validateObjectId('userId'), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+    
+    // Validate new password
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+    
+    // Check if target user is in current user's downline
+    const targetIsInDownline = await isInDownline(req.user._id, userId);
+    
+    if (!targetIsInDownline) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only change password for users in your downline'
+      });
+    }
+    
+    // Get target user
+    const targetUser = await User.findById(userId);
+    
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Update password
+    targetUser.password = newPassword;
+    await targetUser.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully',
+      data: {
+        userId: targetUser._id,
+        username: targetUser.username
+      }
+    });
+  } catch (error) {
+    console.error('Change downline password error:', error);
     res.status(500).json({
       success: false,
       message: 'Password change failed',

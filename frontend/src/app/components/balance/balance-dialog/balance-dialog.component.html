@@ -1,0 +1,99 @@
+<h2 mat-dialog-title>{{ getTitle() }}</h2>
+
+<mat-dialog-content>
+  <div class="dialog-content">
+    <!-- User Info -->
+    <div class="user-info">
+      <mat-icon class="user-icon">account_circle</mat-icon>
+      <div class="user-details">
+        <div class="user-name">{{ data.user.username }}</div>
+        <div class="user-email">{{ data.user.email }}</div>
+        <div class="current-balance">
+          Current Balance: 
+          <span [ngClass]="data.user.balance > 0 ? 'balance-positive' : 'balance-zero'">
+            ${{ data.user.balance.toFixed(2) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Balance Form -->
+    <form [formGroup]="balanceForm" class="balance-form">
+      <!-- Amount Field -->
+      <mat-form-field class="full-width">
+        <mat-label>Amount</mat-label>
+        <input matInput type="number" formControlName="amount" 
+               [placeholder]="'Enter amount (max: $' + getMaxAmount().toFixed(2) + ')'"
+               step="0.01" min="0.01" [max]="getMaxAmount()">
+        <span matPrefix>$&nbsp;</span>
+        <mat-icon matSuffix>{{ data.operation === 'add' ? 'add_circle' : 'remove_circle' }}</mat-icon>
+        <mat-error *ngIf="balanceForm.get('amount')?.invalid && balanceForm.get('amount')?.touched">
+          {{ getErrorMessage('amount') }}
+        </mat-error>
+        <mat-hint *ngIf="data.operation === 'deduct'">
+          Maximum: ${{ data.user.balance.toFixed(2) }}
+        </mat-hint>
+      </mat-form-field>
+
+      <!-- Description Field -->
+      <mat-form-field class="full-width">
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" 
+                  placeholder="Enter description for this transaction"
+                  rows="3" maxlength="500"></textarea>
+        <mat-icon matSuffix>description</mat-icon>
+        <mat-error *ngIf="balanceForm.get('description')?.invalid && balanceForm.get('description')?.touched">
+          {{ getErrorMessage('description') }}
+        </mat-error>
+        <mat-hint>{{ balanceForm.get('description')?.value?.length || 0 }}/500</mat-hint>
+      </mat-form-field>
+
+      <!-- Preview -->
+      <div class="transaction-preview" *ngIf="balanceForm.get('amount')?.valid">
+        <mat-card class="preview-card">
+          <mat-card-content>
+            <div class="preview-header">
+              <mat-icon [ngClass]="data.operation === 'add' ? 'transaction-credit' : 'transaction-debit'">
+                {{ data.operation === 'add' ? 'trending_up' : 'trending_down' }}
+              </mat-icon>
+              <span class="preview-title">Transaction Preview</span>
+            </div>
+            <div class="preview-details">
+              <div class="preview-row">
+                <span class="label">Operation:</span>
+                <span class="value">{{ data.operation === 'add' ? 'Credit' : 'Debit' }}</span>
+              </div>
+              <div class="preview-row">
+                <span class="label">Amount:</span>
+                <span class="value" [ngClass]="data.operation === 'add' ? 'transaction-credit' : 'transaction-debit'">
+                  {{ data.operation === 'add' ? '+' : '-' }}${{ balanceForm.get('amount')?.value || '0.00' }}
+                </span>
+              </div>
+              <div class="preview-row">
+                <span class="label">Current Balance:</span>
+                <span class="value">${{ data.user.balance.toFixed(2) }}</span>
+              </div>
+              <div class="preview-row new-balance">
+                <span class="label">New Balance:</span>
+                <span class="value balance-positive">
+                  ${{ getNewBalance().toFixed(2) }}
+                </span>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </form>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="isLoading">
+    Cancel
+  </button>
+  <button mat-raised-button [color]="getButtonColor()" (click)="onSubmit()" [disabled]="isLoading">
+    <mat-spinner *ngIf="isLoading" diameter="20" class="spinner"></mat-spinner>
+    <span *ngIf="!isLoading">{{ getButtonText() }}</span>
+    <span *ngIf="isLoading">Processing...</span>
+  </button>
+</mat-dialog-actions>

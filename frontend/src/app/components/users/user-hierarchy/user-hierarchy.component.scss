@@ -1,0 +1,162 @@
+@import '../../../../styles.scss';
+
+.hierarchy-container {
+  padding: var(--spacing-md);
+  background: var(--color-background);
+  border-radius: var(--border-radius);
+}
+
+.hierarchy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+
+  h2 {
+    margin: 0;
+    color: var(--color-text-primary);
+  }
+}
+
+.spinner {
+  margin: var(--spacing-xl) auto;
+}
+
+.tree-container {
+  background: var(--color-surface);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.tree-node {
+  margin-bottom: var(--spacing-xs);
+
+  .node-content {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: var(--color-background-hover);
+    }
+  }
+
+  .expand-btn,
+  .spacer {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spacer {
+    opacity: 0;
+  }
+
+  .user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+
+    .user-main {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+
+      .username {
+        font-weight: 600;
+        color: var(--color-text-primary);
+      }
+
+      .role-badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+
+      .balance {
+        color: var(--color-success);
+        font-weight: 600;
+      }
+    }
+
+    .user-details {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+
+      .email {
+        color: var(--color-text-secondary);
+      }
+
+      .status {
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+
+        &.active {
+          background-color: var(--color-success-light);
+          color: var(--color-success);
+        }
+
+        &.inactive {
+          background-color: var(--color-error-light);
+          color: var(--color-error);
+        }
+      }
+    }
+  }
+
+  .view-btn {
+    margin-left: auto;
+  }
+
+  .children {
+    margin-left: var(--spacing-md);
+    border-left: 2px solid var(--color-border);
+    padding-left: var(--spacing-md);
+  }
+}
+
+.no-data {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-secondary);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+  }
+}
+
+// Role badge colors
+.role-super-admin {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.role-admin {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.role-moderator {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.role-user {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}

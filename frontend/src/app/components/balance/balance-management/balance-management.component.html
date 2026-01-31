@@ -1,0 +1,114 @@
+<div class="balance-container">
+  <div class="header">
+    <h1>Balance Management</h1>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <mat-icon class="stat-icon total">account_balance_wallet</mat-icon>
+          <div class="stat-info">
+            <span class="stat-value">${{ getTotalBalance().toFixed(2) }}</span>
+            <span class="stat-label">Total Balance</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <mat-icon class="stat-icon users">people</mat-icon>
+          <div class="stat-info">
+            <span class="stat-value">{{ users.length }}</span>
+            <span class="stat-label">Total Users</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <mat-icon class="stat-icon active">account_balance</mat-icon>
+          <div class="stat-info">
+            <span class="stat-value">{{ getUsersWithBalance() }}</span>
+            <span class="stat-label">Users with Balance</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Search and User List -->
+  <mat-card class="users-card">
+    <mat-card-header>
+      <mat-card-title>User Balance Management</mat-card-title>
+      <mat-card-subtitle>Add or deduct balance for users</mat-card-subtitle>
+    </mat-card-header>
+    
+    <mat-card-content>
+      <!-- Search -->
+      <div class="search-container">
+        <mat-form-field class="search-field">
+          <mat-label>Search Users</mat-label>
+          <input matInput [formControl]="searchControl" placeholder="Search by username or email">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- Users List -->
+      <div class="users-list" *ngIf="!isLoading">
+        <div *ngFor="let user of filteredUsers" class="user-item">
+          <div class="user-info">
+            <div class="user-avatar">
+              <mat-icon>account_circle</mat-icon>
+            </div>
+            <div class="user-details">
+              <div class="user-name">{{ user.username }}</div>
+              <div class="user-email">{{ user.email }}</div>
+              <div class="user-role">
+                <span class="role-badge" [ngClass]="getRoleColor(user.role)">
+                  {{ getRoleDisplayName(user.role) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="user-balance">
+            <div class="balance-amount" [ngClass]="user.balance > 0 ? 'balance-positive' : 'balance-zero'">
+              ${{ user.balance.toFixed(2) }}
+            </div>
+          </div>
+
+          <div class="user-actions" *ngIf="canManageBalance(user)">
+            <button mat-raised-button color="primary" (click)="openBalanceDialog(user, 'add')" class="action-btn">
+              <mat-icon>add</mat-icon>
+              Add
+            </button>
+            <button mat-raised-button color="accent" (click)="openBalanceDialog(user, 'deduct')" 
+                    class="action-btn" [disabled]="user.balance <= 0">
+              <mat-icon>remove</mat-icon>
+              Deduct
+            </button>
+          </div>
+        </div>
+
+        <!-- No users found -->
+        <div *ngIf="filteredUsers.length === 0" class="no-users">
+          <mat-icon>search_off</mat-icon>
+          <p>No users found</p>
+          <span>Try adjusting your search criteria</span>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="isLoading" class="loading-container">
+        <mat-spinner></mat-spinner>
+        <p>Loading users...</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

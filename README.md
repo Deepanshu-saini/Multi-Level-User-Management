@@ -60,80 +60,11 @@ A comprehensive user management system with hierarchical user roles, authenticat
 
 ## 🚀 Quick Start
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/yourusername/multi-level-user-management.git
-cd multi-level-user-management
-```
+### For Local Development
+See [dev-setup.md](dev-setup.md) for local development instructions.
 
-### 2. Install Dependencies
-```bash
-# Install root dependencies
-npm install
-
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../frontend
-npm install
-```
-
-### 3. Environment Setup
-```bash
-# Copy environment file
-cp backend/.env.example backend/.env
-```
-
-Edit `backend/.env` with your configuration:
-```env
-NODE_ENV=development
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/user-management
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_EXPIRE=7d
-BCRYPT_ROUNDS=12
-CORS_ORIGIN=http://localhost:4200
-SESSION_SECRET=your-session-secret-key-change-this-in-production
-```
-
-### 4. Start MongoDB
-Make sure MongoDB is running on your system.
-
-### 5. Seed Database (Optional)
-```bash
-cd backend
-npm run seed
-```
-
-This creates sample users with different roles for testing.
-
-### 6. Start Development Servers
-
-**Option 1: Start both servers concurrently (from root directory)**
-```bash
-npm run dev
-```
-
-**Option 2: Start servers separately**
-
-Backend:
-```bash
-cd backend
-npm run dev
-```
-
-Frontend:
-```bash
-cd frontend
-npm start
-```
-
-### 7. Access the Application
-- **Frontend**: http://localhost:4200
-- **Backend API**: http://localhost:3000
-- **API Health Check**: http://localhost:3000/api/health
+### For Production Deployment
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions on Render and Vercel.
 
 ## 👤 Default Login Credentials
 

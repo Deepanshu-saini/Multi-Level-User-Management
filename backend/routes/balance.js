@@ -4,21 +4,40 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const { authenticateToken, requireRole, canManageUser } = require('../middleware/auth');
 const { validateBalanceOperation, validateTransactionQuery, validateObjectId } = require('../middleware/validation');
+const { isInDownline, getParent } = require('../utils/downline');
+
+// Helper function to safely get user ID as ObjectId
+const getUserObjectId = (user) => {
+  if (!user || !user._id) {
+    throw new Error('User not authenticated or user ID is missing');
+  }
+  // req.user._id should already be an ObjectId from mongoose, but ensure it's valid
+  if (user._id instanceof mongoose.Types.ObjectId) {
+    return user._id;
+  }
+  // If it's a string, convert to ObjectId
+  if (typeof user._id === 'string' && mongoose.Types.ObjectId.isValid(user._id)) {
+    return new mongoose.Types.ObjectId(user._id);
+  }
+  throw new Error('Invalid user ID format');
+};
 
 const router = express.Router();
 
-// Add balance to user
+// Add balance to user (with automatic deduction from sender or parent)
 router.post('/add', authenticateToken, requireRole(['admin', 'super_admin']), validateBalanceOperation, async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
   try {
     const { userId, amount, description } = req.body;
+    const senderId = req.user._id;
+    const transferAmount = parseFloat(amount);
     
-    // Get user
-    const user = await User.findById(userId).session(session);
+    // Get target user
+    const targetUser = await User.findById(userId).session(session);
     
-    if (!user) {
+    if (!targetUser) {
       await session.abortTransaction();
       return res.status(404).json({
         success: false,
@@ -26,42 +45,100 @@ router.post('/add', authenticateToken, requireRole(['admin', 'super_admin']), va
       });
     }
     
-    // Check if current user can manage target user
-    if (!req.user.canManage(user) && req.user._id.toString() !== userId) {
+    // Check if target user is in sender's downline (for regular users)
+    // OR if admin is crediting, check if target is in hierarchy
+    const isTargetInDownline = await isInDownline(senderId, userId);
+    const isSelfRecharge = senderId.toString() === userId.toString();
+    
+    // Allow if: self-recharge OR target is in downline OR admin crediting any user
+    if (!isSelfRecharge && !isTargetInDownline && !['admin', 'super_admin'].includes(req.user.role)) {
       await session.abortTransaction();
       return res.status(403).json({
         success: false,
-        message: 'You cannot manage this user\'s balance'
+        message: 'You can only credit balance to users in your downline'
       });
     }
     
-    const previousBalance = user.balance;
-    const newBalance = previousBalance + parseFloat(amount);
+    // Determine who should pay (sender or parent)
+    let payerId = senderId;
+    let payer = await User.findById(senderId).session(session);
     
-    // Update user balance
+    // If admin is crediting a user, deduct from the user's immediate parent
+    if (['admin', 'super_admin'].includes(req.user.role) && !isSelfRecharge) {
+      const parent = await getParent(userId);
+      if (parent) {
+        payerId = parent._id;
+        payer = await User.findById(parent._id).session(session);
+      }
+      // If no parent (root user), allow admin to credit without deduction
+      // This handles the case where owner/admin recharges themselves or root users
+    }
+    
+    // Check if payer has sufficient balance (only if not self-recharge and has parent)
+    if (!isSelfRecharge && payer && payer.balance < transferAmount) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: payerId.toString() === senderId.toString() 
+          ? 'Insufficient balance' 
+          : 'Parent user has insufficient balance'
+      });
+    }
+    
+    // Deduct from payer (if not self-recharge or if admin crediting with parent)
+    if (!isSelfRecharge && payer && payerId.toString() !== userId.toString()) {
+      const payerPreviousBalance = payer.balance;
+      const payerNewBalance = payerPreviousBalance - transferAmount;
+      
+      await User.findByIdAndUpdate(
+        payerId,
+        { balance: payerNewBalance },
+        { session, new: true }
+      );
+      
+      // Create debit transaction for payer
+      const payerTransaction = new Transaction({
+        userId: payerId,
+        type: 'debit',
+        amount: transferAmount,
+        previousBalance: payerPreviousBalance,
+        newBalance: payerNewBalance,
+        description: description || `Transfer to ${targetUser.username}`,
+        performedBy: senderId
+      });
+      
+      await payerTransaction.save({ session });
+    }
+    
+    // Credit to target user
+    const targetPreviousBalance = targetUser.balance;
+    const targetNewBalance = targetPreviousBalance + transferAmount;
+    
     await User.findByIdAndUpdate(
       userId,
-      { balance: newBalance },
+      { balance: targetNewBalance },
       { session, new: true }
     );
     
-    // Create transaction record
-    const transaction = new Transaction({
+    // Create credit transaction for target user
+    const creditTransaction = new Transaction({
       userId,
       type: 'credit',
-      amount: parseFloat(amount),
-      previousBalance,
-      newBalance,
-      description,
-      performedBy: req.user._id
+      amount: transferAmount,
+      previousBalance: targetPreviousBalance,
+      newBalance: targetNewBalance,
+      description: description || (payerId.toString() === senderId.toString() 
+        ? `Transfer from ${payer.username}` 
+        : `Credit from admin`),
+      performedBy: senderId
     });
     
-    await transaction.save({ session });
+    await creditTransaction.save({ session });
     
     await session.commitTransaction();
     
     // Populate transaction for response
-    await transaction.populate([
+    await creditTransaction.populate([
       { path: 'userId', select: 'username email' },
       { path: 'performedBy', select: 'username email' }
     ]);
@@ -70,8 +147,14 @@ router.post('/add', authenticateToken, requireRole(['admin', 'super_admin']), va
       success: true,
       message: 'Balance added successfully',
       data: {
-        transaction,
-        newBalance
+        transaction: creditTransaction,
+        newBalance: targetNewBalance,
+        deductedFrom: payerId.toString() !== userId.toString() ? {
+          userId: payerId,
+          username: payer.username,
+          previousBalance: payer.balance + transferAmount,
+          newBalance: payer.balance
+        } : null
       }
     });
   } catch (error) {
@@ -178,101 +261,17 @@ router.post('/deduct', authenticateToken, requireRole(['admin', 'super_admin']),
   }
 });
 
-// Get transaction history for a user
-router.get('/history/:userId', authenticateToken, validateObjectId('userId'), validateTransactionQuery, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const {
-      page = 1,
-      limit = 10,
-      type,
-      startDate,
-      endDate,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
-    
-    // Check if user can access this transaction history
-    const targetUser = await User.findById(userId);
-    
-    if (!targetUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-    
-    // Users can only see their own history, admins can see users they manage
-    if (req.user._id.toString() !== userId && !req.user.canManage(targetUser)) {
-      return res.status(403).json({
-        success: false,
-        message: 'You cannot access this transaction history'
-      });
-    }
-    
-    // Build query
-    const query = { userId };
-    
-    if (type) query.type = type;
-    
-    if (startDate && endDate) {
-      query.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      };
-    }
-    
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    // Build sort object
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
-    
-    // Execute query
-    const [transactions, totalTransactions] = await Promise.all([
-      Transaction.find(query)
-        .populate('userId', 'username email')
-        .populate('performedBy', 'username email')
-        .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit)),
-      Transaction.countDocuments(query)
-    ]);
-    
-    // Calculate pagination info
-    const totalPages = Math.ceil(totalTransactions / parseInt(limit));
-    const hasNextPage = parseInt(page) < totalPages;
-    const hasPrevPage = parseInt(page) > 1;
-    
-    res.status(200).json({
-      success: true,
-      message: 'Transaction history retrieved successfully',
-      data: {
-        transactions,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages,
-          totalTransactions,
-          hasNextPage,
-          hasPrevPage,
-          limit: parseInt(limit)
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Get transaction history error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve transaction history',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
-  }
-});
-
-// Get current user's transaction history
+// Get current user's transaction history (MUST come before /history/:userId)
 router.get('/history/me', authenticateToken, validateTransactionQuery, async (req, res) => {
   try {
+    // Ensure user is authenticated and has a valid ID
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
     const {
       page = 1,
       limit = 10,
@@ -283,8 +282,12 @@ router.get('/history/me', authenticateToken, validateTransactionQuery, async (re
       sortOrder = 'desc'
     } = req.query;
     
-    // Build query
-    const query = { userId: req.user._id };
+    // Build query - req.user._id should already be a valid ObjectId from mongoose
+    // But we'll ensure it's properly formatted
+    const userId = req.user._id instanceof mongoose.Types.ObjectId 
+      ? req.user._id 
+      : new mongoose.Types.ObjectId(req.user._id.toString());
+    const query = { userId: userId };
     
     if (type) query.type = type;
     
@@ -335,6 +338,105 @@ router.get('/history/me', authenticateToken, validateTransactionQuery, async (re
     });
   } catch (error) {
     console.error('Get my transaction history error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve transaction history',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// Get transaction history for a user
+router.get('/history/:userId', authenticateToken, validateObjectId('userId'), validateTransactionQuery, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const userIdObj = userId instanceof mongoose.Types.ObjectId 
+      ? userId
+      : new mongoose.Types.ObjectId(userId.toString());
+    const {
+      page = 1,
+      limit = 10,
+      type,
+      startDate,
+      endDate,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+    
+    // Check if user can access this transaction history
+    const targetUser = await User.findById(userIdObj);
+    
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Users can see their own history, or users in their downline, or admins can see users they manage
+    const isOwnHistory = req.user._id.toString() === userIdObj.toString();
+    const isInUserDownline = await isInDownline(req.user._id, userIdObj);
+    const canManage = req.user.canManage(targetUser);
+    
+    if (!isOwnHistory && !isInUserDownline && !canManage) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot access this transaction history'
+      });
+    }
+    
+    // Build query
+    const query = { userId: userIdObj };
+    
+    if (type) query.type = type;
+    
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    
+    // Execute query
+    const [transactions, totalTransactions] = await Promise.all([
+      Transaction.find(query)
+        .populate('userId', 'username email')
+        .populate('performedBy', 'username email')
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Transaction.countDocuments(query)
+    ]);
+    
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalTransactions / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
+    
+    res.status(200).json({
+      success: true,
+      message: 'Transaction history retrieved successfully',
+      data: {
+        transactions,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages,
+          totalTransactions,
+          hasNextPage,
+          hasPrevPage,
+          limit: parseInt(limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get transaction history error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve transaction history',

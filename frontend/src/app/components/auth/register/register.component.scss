@@ -1,4 +1,4 @@
-.login-container {
+.register-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -7,36 +7,12 @@
   padding: var(--spacing-lg);
 }
 
-.login-card {
+.register-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 450px;
   padding: var(--spacing-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border-radius: var(--radius-xl);
-}
-
-.captcha-container {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.captcha-image {
-  flex: 1;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  padding: var(--spacing-sm);
-  background: var(--bg-primary);
-  
-  ::ng-deep svg {
-    width: 100%;
-    height: auto;
-  }
-}
-
-.refresh-captcha {
-  flex-shrink: 0;
 }
 
 .submit-button {
@@ -46,7 +22,7 @@
   position: relative;
 }
 
-.register-link {
+.login-link {
   color: #3f51b5;
   text-decoration: none;
   font-weight: 500;
@@ -57,11 +33,11 @@
 }
 
 @media (max-width: 480px) {
-  .login-container {
+  .register-container {
     padding: var(--spacing-md);
   }
   
-  .login-card {
+  .register-card {
     padding: var(--spacing-md);
   }
 }

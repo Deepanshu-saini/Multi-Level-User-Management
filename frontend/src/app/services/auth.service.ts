@@ -15,9 +15,11 @@ export class AuthService {
   private readonly API_URL = environment.apiUrl;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  private authCheckCompleteSubject = new BehaviorSubject<boolean>(false);
 
   public currentUser$ = this.currentUserSubject.asObservable();
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  public authCheckComplete$ = this.authCheckCompleteSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -123,10 +125,14 @@ export class AuthService {
       next: (response) => {
         if (response.success && response.data) {
           this.setCurrentUser(response.data.user);
+        } else {
+          this.clearCurrentUser();
         }
+        this.authCheckCompleteSubject.next(true);
       },
       error: () => {
         this.clearCurrentUser();
+        this.authCheckCompleteSubject.next(true);
       }
     });
   }

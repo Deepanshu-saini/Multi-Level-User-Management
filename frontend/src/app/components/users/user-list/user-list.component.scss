@@ -1,0 +1,59 @@
+.user-list-container {
+  padding: var(--spacing-lg);
+  max-width: var(--container-xl);
+  margin: 0 auto;
+}
+
+.table-container {
+  position: relative;
+  min-height: 400px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  
+  .user-avatar {
+    color: var(--text-secondary);
+    font-size: var(--font-size-xl);
+  }
+}
+
+.delete-action {
+  color: var(--color-error);
+}
+
+// Status column alignment
+.mat-column-isActive {
+  .mat-mdc-cell {
+    display: flex;
+    align-items: center;
+    
+    mat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      margin: 0;
+      
+      mat-icon {
+        font-size: var(--font-size-sm);
+        width: var(--font-size-sm);
+        height: var(--font-size-sm);
+        line-height: var(--font-size-sm);
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .user-list-container {
+    padding: var(--spacing-md);
+  }
+  
+  // Hide some columns on mobile
+  .mat-column-email,
+  .mat-column-createdAt {
+    display: none;
+  }
+}

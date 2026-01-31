@@ -1,0 +1,33 @@
+.dialog-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+  
+  .warning-icon {
+    color: var(--color-warning);
+    font-size: var(--font-size-2xl);
+    width: var(--font-size-2xl);
+    height: var(--font-size-2xl);
+    flex-shrink: 0;
+  }
+  
+  .info-icon {
+    color: var(--color-info);
+    font-size: var(--font-size-2xl);
+    width: var(--font-size-2xl);
+    height: var(--font-size-2xl);
+    flex-shrink: 0;
+  }
+  
+  p {
+    margin: 0;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+}
+
+mat-dialog-actions {
+  padding: var(--spacing-md) 0;
+  gap: var(--spacing-sm);
+}

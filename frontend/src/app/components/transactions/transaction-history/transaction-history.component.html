@@ -1,0 +1,145 @@
+<div class="transaction-container">
+  <div class="header">
+    <h1>Transaction History</h1>
+    <button mat-raised-button color="primary" (click)="exportTransactions()">
+      <mat-icon>download</mat-icon>
+      Export
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="filters">
+        <mat-form-field class="filter-field">
+          <mat-label>Transaction Type</mat-label>
+          <mat-select [(value)]="typeFilter" (selectionChange)="applyFilter()">
+            <mat-option value="">All Types</mat-option>
+            <mat-option value="credit">Credit (+)</mat-option>
+            <mat-option value="debit">Debit (-)</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field class="filter-field">
+          <mat-label>Start Date</mat-label>
+          <input matInput [matDatepicker]="startPicker" [formControl]="startDateControl" (dateChange)="applyFilter()">
+          <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+          <mat-datepicker #startPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field class="filter-field">
+          <mat-label>End Date</mat-label>
+          <input matInput [matDatepicker]="endPicker" [formControl]="endDateControl" (dateChange)="applyFilter()">
+          <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+          <mat-datepicker #endPicker></mat-datepicker>
+        </mat-form-field>
+
+        <div class="filter-actions">
+          <button mat-raised-button (click)="applyFilter()">
+            <mat-icon>search</mat-icon>
+            Apply
+          </button>
+          <button mat-button (click)="clearFilters()">
+            <mat-icon>clear</mat-icon>
+            Clear
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Transactions Table -->
+  <mat-card class="table-card">
+    <mat-card-content>
+      <div class="table-container">
+        <table mat-table [dataSource]="dataSource" matSort class="transactions-table">
+          <!-- Reference Column -->
+          <ng-container matColumnDef="reference">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Reference</th>
+            <td mat-cell *matCellDef="let transaction">
+              <div class="reference-cell">
+                <span class="reference-id">{{ transaction.reference }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Type Column -->
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+            <td mat-cell *matCellDef="let transaction">
+              <div class="type-cell" [ngClass]="getTransactionTypeClass(transaction.type)">
+                <mat-icon>{{ getTransactionTypeIcon(transaction.type) }}</mat-icon>
+                <span>{{ transaction.type | titlecase }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Amount Column -->
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Amount</th>
+            <td mat-cell *matCellDef="let transaction">
+              <span class="amount" [ngClass]="getTransactionTypeClass(transaction.type)">
+                {{ getTransactionSign(transaction.type) }}${{ transaction.amount.toFixed(2) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Description Column -->
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>Description</th>
+            <td mat-cell *matCellDef="let transaction">
+              <span class="description" [title]="transaction.description">
+                {{ transaction.description }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Performed By Column -->
+          <ng-container matColumnDef="performedBy">
+            <th mat-header-cell *matHeaderCellDef>Performed By</th>
+            <td mat-cell *matCellDef="let transaction">
+              <div class="performer-cell">
+                <mat-icon class="performer-icon">account_circle</mat-icon>
+                <span>{{ transaction.performedBy.username }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Date Column -->
+          <ng-container matColumnDef="createdAt">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
+            <td mat-cell *matCellDef="let transaction">
+              <div class="date-cell">
+                <span class="date">{{ transaction.createdAt | date:'short' }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="transaction-row"></tr>
+        </table>
+
+        <!-- Loading Spinner -->
+        <div *ngIf="isLoading" class="loading-container">
+          <mat-spinner></mat-spinner>
+        </div>
+
+        <!-- No Data Message -->
+        <div *ngIf="!isLoading && dataSource.data.length === 0" class="no-data">
+          <mat-icon>receipt_long</mat-icon>
+          <p>No transactions found</p>
+          <span>Try adjusting your filters or check back later</span>
+        </div>
+      </div>
+
+      <!-- Paginator -->
+      <mat-paginator 
+        [length]="totalTransactions"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[5, 10, 25, 50]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons>
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>

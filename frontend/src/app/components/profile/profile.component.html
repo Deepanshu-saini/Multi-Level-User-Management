@@ -1,0 +1,162 @@
+<div class="profile-container">
+  <div class="header">
+    <h1>My Profile</h1>
+  </div>
+
+  <div class="profile-content" *ngIf="currentUser">
+    <!-- Account Information Card -->
+    <mat-card class="info-card">
+      <mat-card-header>
+        <mat-card-title>Account Information</mat-card-title>
+        <mat-card-subtitle>View your account details</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="account-info">
+          <div class="info-row">
+            <mat-icon>person</mat-icon>
+            <div class="info-content">
+              <span class="label">Username:</span>
+              <span class="value">{{ currentUser.username }}</span>
+            </div>
+          </div>
+          
+          <div class="info-row">
+            <mat-icon>email</mat-icon>
+            <div class="info-content">
+              <span class="label">Email:</span>
+              <span class="value">{{ currentUser.email }}</span>
+            </div>
+          </div>
+          
+          <div class="info-row">
+            <mat-icon>security</mat-icon>
+            <div class="info-content">
+              <span class="label">Role:</span>
+              <span class="role-badge" [ngClass]="getRoleColor(currentUser.role)">
+                {{ getRoleDisplayName(currentUser.role) }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="info-row">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <div class="info-content">
+              <span class="label">Balance:</span>
+              <span class="balance" [ngClass]="currentUser.balance > 0 ? 'balance-positive' : 'balance-zero'">
+                ${{ currentUser.balance.toFixed(2) }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="info-row">
+            <mat-icon>schedule</mat-icon>
+            <div class="info-content">
+              <span class="label">Last Login:</span>
+              <span class="value">{{ currentUser.lastLogin | date:'medium' }}</span>
+            </div>
+          </div>
+          
+          <div class="info-row">
+            <mat-icon>today</mat-icon>
+            <div class="info-content">
+              <span class="label">Member Since:</span>
+              <span class="value">{{ currentUser.createdAt | date:'mediumDate' }}</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Edit Profile Card -->
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>Edit Profile</mat-card-title>
+        <mat-card-subtitle>Update your personal information</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="profileForm" (ngSubmit)="onUpdateProfile()" class="profile-form">
+          <mat-form-field class="full-width">
+            <mat-label>Username</mat-label>
+            <input matInput formControlName="username" placeholder="Enter your username">
+            <mat-icon matSuffix>person</mat-icon>
+            <mat-error *ngIf="profileForm.get('username')?.invalid && profileForm.get('username')?.touched">
+              {{ getErrorMessage(profileForm, 'username') }}
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="full-width">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" formControlName="email" placeholder="Enter your email">
+            <mat-icon matSuffix>email</mat-icon>
+            <mat-error *ngIf="profileForm.get('email')?.invalid && profileForm.get('email')?.touched">
+              {{ getErrorMessage(profileForm, 'email') }}
+            </mat-error>
+          </mat-form-field>
+
+          <div class="form-actions">
+            <button mat-raised-button color="primary" type="submit" [disabled]="isLoading || !profileForm.dirty">
+              <mat-spinner *ngIf="isLoading" diameter="20" class="spinner"></mat-spinner>
+              <span *ngIf="!isLoading">Update Profile</span>
+              <span *ngIf="isLoading">Updating...</span>
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Change Password Card -->
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>Change Password</mat-card-title>
+        <mat-card-subtitle>Update your account password</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="passwordForm" (ngSubmit)="onChangePassword()" class="password-form">
+          <mat-form-field class="full-width">
+            <mat-label>Current Password</mat-label>
+            <input matInput [type]="hideCurrentPassword ? 'password' : 'text'" 
+                   formControlName="currentPassword" placeholder="Enter current password">
+            <button mat-icon-button matSuffix (click)="hideCurrentPassword = !hideCurrentPassword" type="button">
+              <mat-icon>{{ hideCurrentPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            <mat-error *ngIf="passwordForm.get('currentPassword')?.invalid && passwordForm.get('currentPassword')?.touched">
+              {{ getErrorMessage(passwordForm, 'currentPassword') }}
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="full-width">
+            <mat-label>New Password</mat-label>
+            <input matInput [type]="hideNewPassword ? 'password' : 'text'" 
+                   formControlName="newPassword" placeholder="Enter new password">
+            <button mat-icon-button matSuffix (click)="hideNewPassword = !hideNewPassword" type="button">
+              <mat-icon>{{ hideNewPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            <mat-error *ngIf="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched">
+              {{ getErrorMessage(passwordForm, 'newPassword') }}
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field class="full-width">
+            <mat-label>Confirm New Password</mat-label>
+            <input matInput [type]="hideConfirmPassword ? 'password' : 'text'" 
+                   formControlName="confirmPassword" placeholder="Confirm new password">
+            <button mat-icon-button matSuffix (click)="hideConfirmPassword = !hideConfirmPassword" type="button">
+              <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            <mat-error *ngIf="passwordForm.get('confirmPassword')?.invalid && passwordForm.get('confirmPassword')?.touched">
+              {{ getErrorMessage(passwordForm, 'confirmPassword') }}
+            </mat-error>
+          </mat-form-field>
+
+          <div class="form-actions">
+            <button mat-raised-button color="accent" type="submit" [disabled]="isPasswordLoading">
+              <mat-spinner *ngIf="isPasswordLoading" diameter="20" class="spinner"></mat-spinner>
+              <span *ngIf="!isPasswordLoading">Change Password</span>
+              <span *ngIf="isPasswordLoading">Changing...</span>
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

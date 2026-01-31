@@ -41,6 +41,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     // Check if user is already authenticated on app start
+    // This must be called immediately to restore auth state before guards run
     this.authService.checkAuthStatus();
   }
 }

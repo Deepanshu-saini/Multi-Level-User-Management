@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { filter, take } from 'rxjs/operators';
 
 import { AuthService } from '../../../services/auth.service';
 
@@ -33,13 +34,17 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Redirect if already authenticated
-    if (this.authService.isAuthenticated) {
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-    
-    this.loadCaptcha();
+    // Wait for auth check to complete, then redirect if already authenticated
+    this.authService.authCheckComplete$.pipe(
+      filter(complete => complete),
+      take(1)
+    ).subscribe(() => {
+      if (this.authService.isAuthenticated) {
+        this.router.navigate(['/dashboard']);
+        return;
+      }
+      this.loadCaptcha();
+    });
   }
 
   loadCaptcha() {

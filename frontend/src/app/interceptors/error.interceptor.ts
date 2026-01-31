@@ -18,6 +18,7 @@ export class ErrorInterceptor implements HttpInterceptor {
     return next.handle(req).pipe(
       catchError((error: HttpErrorResponse) => {
         let errorMessage = 'An error occurred';
+        let showSnackBar = true;
 
         if (error.error instanceof ErrorEvent) {
           // Client-side error
@@ -25,10 +26,15 @@ export class ErrorInterceptor implements HttpInterceptor {
         } else {
           // Server-side error
           if (error.status === 401) {
-            // Unauthorized - redirect to login
-            this.authService.logout().subscribe();
-            this.router.navigate(['/login']);
-            errorMessage = 'Session expired. Please login again.';
+            // Only show session expired if user was previously authenticated
+            if (this.authService.isAuthenticated && !req.url.includes('/auth/login') && !req.url.includes('/auth/register')) {
+              errorMessage = 'Session expired. Please login again.';
+              this.authService.logout().subscribe();
+              this.router.navigate(['/login']);
+            } else {
+              // Don't show snackbar for login/register 401 errors
+              showSnackBar = false;
+            }
           } else if (error.status === 403) {
             // Forbidden
             errorMessage = 'You do not have permission to perform this action.';
@@ -45,7 +51,7 @@ export class ErrorInterceptor implements HttpInterceptor {
         }
 
         // Show error message (except for login/register pages to avoid duplicate messages)
-        if (!req.url.includes('/auth/login') && !req.url.includes('/auth/register')) {
+        if (showSnackBar && !req.url.includes('/auth/login') && !req.url.includes('/auth/register')) {
           this.snackBar.open(errorMessage, 'Close', {
             duration: 5000,
             panelClass: ['error-snackbar']
