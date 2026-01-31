@@ -13,6 +13,9 @@ const balanceRoutes = require('./routes/balance');
 
 const app = express();
 
+// Trust proxy - required when running behind reverse proxy (like Render, Heroku, etc.)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 

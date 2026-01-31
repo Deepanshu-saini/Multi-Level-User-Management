@@ -1,0 +1,779 @@
+{
+	"info": {
+		"_postman_id": "user-management-api-collection",
+		"name": "User Management API",
+		"description": "Complete API collection for Multi-Level User Management System with authentication, user management, and balance operations",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Get CAPTCHA",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/captcha",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "captcha"]
+						},
+						"description": "Generate a new CAPTCHA for login. Returns SVG image and CAPTCHA ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"user\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Register a new user. If authenticated, creates user in hierarchy."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data && response.data.token) {",
+									"        pm.environment.set('authToken', response.data.token);",
+									"        pm.environment.set('currentUserId', response.data.user.id);",
+									"        pm.environment.set('currentUserRole', response.data.user.role);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"captcha\": \"abcd\",\n  \"captchaId\": \"your-captcha-id-here\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "Login with email, password, and CAPTCHA. Sets auth token in environment."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Token",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/verify",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "verify"]
+						},
+						"description": "Verify current authentication token and get user info."
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password (Self)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"oldpassword123\",\n  \"newPassword\": \"newpassword123\",\n  \"confirmPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/change-password",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "change-password"]
+						},
+						"description": "Change current user's password."
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password (Downline User)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/change-password/{{targetUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "change-password", "{{targetUserId}}"]
+						},
+						"description": "Change password for a user in your downline."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "refresh"]
+						},
+						"description": "Refresh authentication token."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "logout"]
+						},
+						"description": "Logout and clear authentication token."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for user registration, login, and token management."
+		},
+		{
+			"name": "User Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users?page=1&limit=10&role=user&isActive=true&search=test&sortBy=createdAt&sortOrder=desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								},
+								{
+									"key": "role",
+									"value": "user",
+									"description": "Filter by role"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"description": "Filter by active status"
+								},
+								{
+									"key": "search",
+									"value": "test",
+									"description": "Search in username/email"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Sort field"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Sort order (asc/desc)"
+								}
+							]
+						},
+						"description": "Get paginated list of users with filtering and search."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{targetUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{targetUserId}}"]
+						},
+						"description": "Get specific user details by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"updateduser\",\n  \"email\": \"updated@example.com\",\n  \"role\": \"moderator\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{targetUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{targetUserId}}"]
+						},
+						"description": "Update user information."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{targetUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{targetUserId}}"]
+						},
+						"description": "Delete user (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/stats/overview",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "stats", "overview"]
+						},
+						"description": "Get user statistics overview (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/profile/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "profile", "me"]
+						},
+						"description": "Get current user's profile."
+					},
+					"response": []
+				},
+				{
+					"name": "Update My Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"myupdatedusername\",\n  \"email\": \"myupdated@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/profile/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "profile", "me"]
+						},
+						"description": "Update current user's profile."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Downline",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{targetUserId}}/downline",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{targetUserId}}", "downline"]
+						},
+						"description": "Get flat list of users in downline hierarchy."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Downline Tree",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{targetUserId}}/downline/tree",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{targetUserId}}", "downline", "tree"]
+						},
+						"description": "Get downline hierarchy as tree structure."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Next Level Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{targetUserId}}/next-level",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{targetUserId}}", "next-level"]
+						},
+						"description": "Get direct children (next level) users only."
+					},
+					"response": []
+				}
+			],
+			"description": "User management endpoints for CRUD operations and hierarchy management."
+		},
+		{
+			"name": "Balance Management",
+			"item": [
+				{
+					"name": "Add Balance",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{targetUserId}}\",\n  \"amount\": 100.50,\n  \"description\": \"Balance top-up\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/balance/add",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "balance", "add"]
+						},
+						"description": "Add balance to user account. Automatically deducts from parent or sender."
+					},
+					"response": []
+				},
+				{
+					"name": "Deduct Balance",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{targetUserId}}\",\n  \"amount\": 50.25,\n  \"description\": \"Service charge\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/balance/deduct",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "balance", "deduct"]
+						},
+						"description": "Deduct balance from user account (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Transaction History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/balance/history/me?page=1&limit=10&type=credit&startDate=2024-01-01&endDate=2024-12-31&sortBy=createdAt&sortOrder=desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "balance", "history", "me"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								},
+								{
+									"key": "type",
+									"value": "credit",
+									"description": "Transaction type (credit/debit)"
+								},
+								{
+									"key": "startDate",
+									"value": "2024-01-01",
+									"description": "Start date filter"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31",
+									"description": "End date filter"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Sort field"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Sort order (asc/desc)"
+								}
+							]
+						},
+						"description": "Get current user's transaction history with pagination and filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Transaction History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/balance/history/{{targetUserId}}?page=1&limit=10&type=debit&startDate=2024-01-01&endDate=2024-12-31&sortBy=createdAt&sortOrder=desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "balance", "history", "{{targetUserId}}"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page"
+								},
+								{
+									"key": "type",
+									"value": "debit",
+									"description": "Transaction type (credit/debit)"
+								},
+								{
+									"key": "startDate",
+									"value": "2024-01-01",
+									"description": "Start date filter"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31",
+									"description": "End date filter"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Sort field"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Sort order (asc/desc)"
+								}
+							]
+						},
+						"description": "Get transaction history for a specific user (requires permission)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/balance/summary/{{targetUserId}}?startDate=2024-01-01&endDate=2024-12-31",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "balance", "summary", "{{targetUserId}}"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01",
+									"description": "Start date for summary"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31",
+									"description": "End date for summary"
+								}
+							]
+						},
+						"description": "Get transaction summary for a user with totals and counts."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/balance/stats/overview?startDate=2024-01-01&endDate=2024-12-31",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "balance", "stats", "overview"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01",
+									"description": "Start date for statistics"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31",
+									"description": "End date for statistics"
+								}
+							]
+						},
+						"description": "Get overall transaction statistics (admin only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction by Reference",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/balance/transaction/{{transactionReference}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "balance", "transaction", "{{transactionReference}}"]
+						},
+						"description": "Get specific transaction details by reference ID."
+					},
+					"response": []
+				}
+			],
+			"description": "Balance and transaction management endpoints for financial operations."
+		},
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "health"]
+						},
+						"description": "Check if the API server is running and healthy."
+					},
+					"response": []
+				}
+			],
+			"description": "System health and status endpoints."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://user-management-backend-893q.onrender.com",
+			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "currentUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "currentUserRole",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "targetUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "transactionReference",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
