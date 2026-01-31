@@ -8,7 +8,8 @@ const { getDownline, getDownlineTree, isInDownline, getNextLevelUsers } = requir
 const router = express.Router();
 
 // Get all users (with pagination and filtering)
-router.get('/', authenticateToken, requireRole(['admin', 'super_admin']), validateUserQuery, async (req, res) => {
+// All authenticated users can access, but results are filtered based on role
+router.get('/', authenticateToken, validateUserQuery, async (req, res) => {
   try {
     const {
       page = 1,
@@ -23,13 +24,54 @@ router.get('/', authenticateToken, requireRole(['admin', 'super_admin']), valida
     // Build query based on user role
     let query = {};
     
-    // Super admin can see all users, admin can see users they can manage
-    if (req.user.role === 'admin') {
-      query.role = { $in: ['user', 'moderator'] };
+    // Super admin can see all users
+    if (req.user.role === 'super_admin') {
+      // No restrictions - can see all users
+    }
+    // Admin can see users they can manage (user, moderator, admin)
+    else if (req.user.role === 'admin') {
+      query.role = { $in: ['user', 'moderator', 'admin'] };
+    }
+    // Regular users and moderators can only see their downline
+    else {
+      // Get all users in the current user's downline
+      const downline = await getDownline(req.user._id, false);
+      const downlineIds = downline.map(u => u._id);
+      
+      // If no downline, return empty result
+      if (downlineIds.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: 'Users retrieved successfully',
+          data: {
+            users: [],
+            pagination: {
+              currentPage: parseInt(page),
+              totalPages: 0,
+              totalUsers: 0,
+              hasNextPage: false,
+              hasPrevPage: false,
+              limit: parseInt(limit)
+            }
+          }
+        });
+      }
+      
+      query._id = { $in: downlineIds };
     }
     
-    // Apply filters
-    if (role) query.role = role;
+    // Apply filters (only if they don't conflict with role-based restrictions)
+    if (role && req.user.role === 'super_admin') {
+      query.role = role;
+    } else if (role && req.user.role === 'admin' && ['user', 'moderator', 'admin'].includes(role)) {
+      // For admin, combine role filter with existing role restriction
+      if (query.role && query.role.$in) {
+        query.role = { $in: query.role.$in.filter(r => r === role) };
+      } else {
+        query.role = role;
+      }
+    }
+    
     if (isActive !== undefined) query.isActive = isActive === 'true';
     
     // Search functionality

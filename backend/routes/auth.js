@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const svgCaptcha = require('svg-captcha');
 const User = require('../models/User');
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const { authenticateToken, optionalAuth, requireRole } = require('../middleware/auth');
 const { validateRegistration, validateLogin, validatePasswordChange, validateObjectId } = require('../middleware/validation');
 const { isInDownline } = require('../utils/downline');
 
@@ -35,8 +35,8 @@ router.get('/captcha', (req, res) => {
   }
 });
 
-// User registration
-router.post('/register', validateRegistration, async (req, res) => {
+// User registration (optionally authenticated - if logged in, sets createdBy for hierarchy)
+router.post('/register', optionalAuth, validateRegistration, async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
     

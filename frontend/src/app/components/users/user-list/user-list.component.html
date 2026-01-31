@@ -119,24 +119,24 @@
           <!-- Actions Column -->
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let user">
-              <button mat-icon-button [matMenuTriggerFor]="menu" [disabled]="!canEditUser(user)">
+            <td mat-cell *matCellDef="let user" (click)="$event.stopPropagation()">
+              <button mat-icon-button [matMenuTriggerFor]="menu" [disabled]="!canEditUser(user)" (click)="$event.stopPropagation()">
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #menu="matMenu">
-                <button mat-menu-item (click)="viewHierarchy(user)" *ngIf="authService.hasRole(['admin', 'super_admin'])">
+                <button mat-menu-item (click)="viewHierarchy(user); $event.stopPropagation()" *ngIf="authService.hasRole(['admin', 'super_admin'])">
                   <mat-icon>account_tree</mat-icon>
                   <span>View Hierarchy</span>
                 </button>
-                <button mat-menu-item (click)="openUserDialog(user)" *ngIf="canEditUser(user)">
+                <button mat-menu-item (click)="openUserDialog(user); $event.stopPropagation()" *ngIf="canEditUser(user)">
                   <mat-icon>edit</mat-icon>
                   <span>Edit</span>
                 </button>
-                <button mat-menu-item (click)="toggleUserStatus(user)" *ngIf="canEditUser(user)">
+                <button mat-menu-item (click)="toggleUserStatus(user); $event.stopPropagation()" *ngIf="canEditUser(user)">
                   <mat-icon>{{ user.isActive ? 'block' : 'check_circle' }}</mat-icon>
                   <span>{{ user.isActive ? 'Deactivate' : 'Activate' }}</span>
                 </button>
-                <button mat-menu-item (click)="deleteUser(user)" *ngIf="canDeleteUser(user)" class="delete-action">
+                <button mat-menu-item (click)="deleteUser(user); $event.stopPropagation()" *ngIf="canDeleteUser(user)" class="delete-action">
                   <mat-icon>delete</mat-icon>
                   <span>Delete</span>
                 </button>
@@ -145,7 +145,10 @@
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+              (click)="viewHierarchy(row)" 
+              [class.clickable-row]="authService.hasRole(['admin', 'super_admin'])"
+              style="cursor: pointer;"></tr>
         </table>
 
         <!-- Loading Spinner -->

@@ -60,18 +60,19 @@ router.post('/add', authenticateToken, requireRole(['admin', 'super_admin']), va
     }
     
     // Determine who should pay (sender or parent)
+    // ALWAYS deduct from the target user's immediate parent when crediting to any user in hierarchy
     let payerId = senderId;
     let payer = await User.findById(senderId).session(session);
     
-    // If admin is crediting a user, deduct from the user's immediate parent
-    if (['admin', 'super_admin'].includes(req.user.role) && !isSelfRecharge) {
+    // When crediting to any user in the hierarchy, deduct from that user's immediate parent
+    if (!isSelfRecharge) {
       const parent = await getParent(userId);
       if (parent) {
         payerId = parent._id;
         payer = await User.findById(parent._id).session(session);
       }
-      // If no parent (root user), allow admin to credit without deduction
-      // This handles the case where owner/admin recharges themselves or root users
+      // If no parent (root user), deduct from sender (admin/self-recharge scenario)
+      // This handles the case where owner/admin recharges root users or themselves
     }
     
     // Check if payer has sufficient balance (only if not self-recharge and has parent)
