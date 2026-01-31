@@ -34,10 +34,10 @@ export class AuthService {
     return this.isAuthenticatedSubject.value;
   }
 
-  getCaptcha(): Observable<string> {
-    return this.http.get(`${this.API_URL}/auth/captcha`, { 
-      responseType: 'text' 
-    });
+  getCaptcha(): Observable<{captchaSvg: string, captchaId: string}> {
+    return this.http.get<ApiResponse<{captchaSvg: string, captchaId: string}>>(`${this.API_URL}/auth/captcha`).pipe(
+      map(response => response.data!)
+    );
   }
 
   register(userData: {
@@ -63,6 +63,7 @@ export class AuthService {
     email: string;
     password: string;
     captcha: string;
+    captchaId: string;
   }): Observable<ApiResponse<{ user: User; token: string }>> {
     return this.http.post<ApiResponse<{ user: User; token: string }>>(
       `${this.API_URL}/auth/login`,

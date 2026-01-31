@@ -1,12 +1,26 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const svgCaptcha = require('svg-captcha');
+const crypto = require('crypto');
 const User = require('../models/User');
 const { authenticateToken, optionalAuth, requireRole } = require('../middleware/auth');
 const { validateRegistration, validateLogin, validatePasswordChange, validateObjectId } = require('../middleware/validation');
 const { isInDownline } = require('../utils/downline');
 
 const router = express.Router();
+
+// Simple in-memory store for CAPTCHA (better than sessions for serverless)
+const captchaStore = new Map();
+
+// Clean up expired CAPTCHAs every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of captchaStore.entries()) {
+    if (now > value.expiresAt) {
+      captchaStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
 
 // Generate CAPTCHA
 router.get('/captcha', (req, res) => {
@@ -18,25 +32,23 @@ router.get('/captcha', (req, res) => {
       background: '#f0f0f0'
     });
     
-    // Create a JWT token containing the CAPTCHA text and expiry
-    const captchaToken = jwt.sign(
-      { 
-        captcha: captcha.text.toLowerCase(),
-        exp: Math.floor(Date.now() / 1000) + (5 * 60) // 5 minutes from now
-      },
-      process.env.JWT_SECRET
-    );
+    // Generate a unique CAPTCHA ID
+    const captchaId = crypto.randomBytes(16).toString('hex');
     
-    // Set the CAPTCHA token as an HTTP-only cookie
-    res.cookie('captcha_token', captchaToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 5 * 60 * 1000 // 5 minutes
+    // Store CAPTCHA text and expiry time (5 minutes)
+    captchaStore.set(captchaId, {
+      text: captcha.text.toLowerCase(),
+      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes from now
     });
     
-    res.type('svg');
-    res.status(200).send(captcha.data);
+    // Return both the SVG and the CAPTCHA ID
+    res.status(200).json({
+      success: true,
+      data: {
+        captchaSvg: captcha.data,
+        captchaId: captchaId
+      }
+    });
   } catch (error) {
     console.error('CAPTCHA generation error:', error);
     res.status(500).json({
@@ -163,24 +175,28 @@ router.post('/register', optionalAuth, validateRegistration, async (req, res) =>
 // User login
 router.post('/login', validateLogin, async (req, res) => {
   try {
-    const { email, password, captcha } = req.body;
+    const { email, password, captcha, captchaId } = req.body;
     
-    // Verify CAPTCHA using JWT token from cookie
-    const captchaToken = req.cookies.captcha_token;
+    // Verify CAPTCHA using ID from request body
+    if (!captchaId) {
+      return res.status(400).json({
+        success: false,
+        message: 'CAPTCHA ID not found. Please refresh the CAPTCHA.'
+      });
+    }
     
-    if (!captchaToken) {
+    const captchaData = captchaStore.get(captchaId);
+    
+    if (!captchaData) {
       return res.status(400).json({
         success: false,
         message: 'CAPTCHA not found. Please refresh the CAPTCHA.'
       });
     }
     
-    let captchaData;
-    try {
-      captchaData = jwt.verify(captchaToken, process.env.JWT_SECRET);
-    } catch (tokenError) {
-      // Clear the invalid token
-      res.clearCookie('captcha_token');
+    // Check if CAPTCHA has expired (5 minutes)
+    if (Date.now() > captchaData.expiresAt) {
+      captchaStore.delete(captchaId);
       return res.status(400).json({
         success: false,
         message: 'CAPTCHA has expired. Please refresh and try again.'
@@ -188,15 +204,15 @@ router.post('/login', validateLogin, async (req, res) => {
     }
     
     // Verify CAPTCHA text
-    if (captcha.toLowerCase() !== captchaData.captcha) {
+    if (captcha.toLowerCase() !== captchaData.text) {
       return res.status(400).json({
         success: false,
         message: 'Invalid CAPTCHA'
       });
     }
     
-    // Clear CAPTCHA token after successful verification
-    res.clearCookie('captcha_token');
+    // Clear CAPTCHA after successful verification
+    captchaStore.delete(captchaId);
     
     // Find user by email
     const user = await User.findOne({ email });

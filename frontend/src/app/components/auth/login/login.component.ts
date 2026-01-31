@@ -17,6 +17,7 @@ export class LoginComponent implements OnInit {
   isLoading = false;
   hidePassword = true;
   captchaSvg: SafeHtml = '';
+  captchaId: string = '';
   errorMessage = '';
 
   constructor(
@@ -49,8 +50,9 @@ export class LoginComponent implements OnInit {
 
   loadCaptcha() {
     this.authService.getCaptcha().subscribe({
-      next: (captcha) => {
-        this.captchaSvg = this.sanitizer.bypassSecurityTrustHtml(captcha);
+      next: (captchaData) => {
+        this.captchaSvg = this.sanitizer.bypassSecurityTrustHtml(captchaData.captchaSvg);
+        this.captchaId = captchaData.captchaId;
       },
       error: (error) => {
         console.error('Failed to load CAPTCHA:', error);
@@ -60,11 +62,14 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit() {
-    if (this.loginForm.valid) {
+    if (this.loginForm.valid && this.captchaId) {
       this.isLoading = true;
       this.errorMessage = '';
 
-      const credentials = this.loginForm.value;
+      const credentials = {
+        ...this.loginForm.value,
+        captchaId: this.captchaId
+      };
 
       this.authService.login(credentials).subscribe({
         next: (response) => {
@@ -84,6 +89,10 @@ export class LoginComponent implements OnInit {
         }
       });
     } else {
+      if (!this.captchaId) {
+        this.errorMessage = 'Please refresh the CAPTCHA and try again.';
+        this.loadCaptcha();
+      }
       this.markFormGroupTouched();
     }
   }
